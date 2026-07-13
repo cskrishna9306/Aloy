@@ -1,0 +1,32 @@
+[project]
+name = "aloy"
+version = "0.1.0"
+description = "Wakes up, checks my TODOs, tells me what matters! An Alexa skill + LLM summarizer for daily goals."
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+
+# Tags / Keywords for PyPI discovery
+keywords = [
+	"alexa-skill",
+	"LLM",
+	"daily-motivator",
+	"github",
+]
+
+# Constributors
+authors = [
+    { name = "Sai Chaparala", email = "cskrishna9306@gmail.com" }
+]
+
+# Project dependencies
+dependencies = [
+    "boto3 (>=1.43.47,<2.0.0)"
+]
+
+[project.urls]
+Homepage = "https://github.com/cskrishna9306/Aloy"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
