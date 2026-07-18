@@ -1,0 +1,8 @@
+# Pinned to match pyproject.toml. Kept separate (rather than sharing
+# pyproject/uv.lock directly) since sam build's Makefile/Taskfile step just
+# needs a plain requirements list to pip install into the artifacts dir.
+ask-sdk-core>=1.19.0
+boto3>=1.43.47,<2.0.0
+pydantic>=2.13.4
+python-dotenv>=1.2.2
+requests>=2.34.2

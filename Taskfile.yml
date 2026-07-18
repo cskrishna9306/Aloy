@@ -1,0 +1,68 @@
+version: "3"
+
+dotenv: [".env"]
+
+vars:
+  FUNCTION_NAME: aloy
+  ROLE_NAME: aloy-lambda-role
+  BUILD_DIR: .build
+  ZIP_FILE: aloy.zip
+
+tasks:
+  package:
+    desc: Assemble the Lambda deployment package into a zip
+    cmds:
+      - rm -rf "{{.BUILD_DIR}}" "{{.ZIP_FILE}}"
+      - mkdir -p "{{.BUILD_DIR}}"
+      - uv pip install -r aws/lambda/requirements.txt --target "{{.BUILD_DIR}}" --no-cache
+      - cp aws/lambda/function.py "{{.BUILD_DIR}}/"
+      - cp -r src "{{.BUILD_DIR}}/"
+      - find "{{.BUILD_DIR}}/src" -name "__pycache__" -exec rm -rf {} +
+      - cd "{{.BUILD_DIR}}" && zip -r "../{{.ZIP_FILE}}" . -x ".*" >/dev/null
+
+  ensure-role:
+    desc: Create the Lambda execution role if it doesn't exist yet
+    cmds:
+      - |
+        if ! aws iam get-role --role-name {{.ROLE_NAME}} >/dev/null 2>&1; then
+          aws iam create-role --role-name {{.ROLE_NAME}} \
+            --assume-role-policy-document file://aws/lambda/trust-policy.json >/dev/null
+          aws iam attach-role-policy --role-name {{.ROLE_NAME}} \
+            --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+          aws iam put-role-policy --role-name {{.ROLE_NAME}} \
+            --policy-name bedrock-invoke \
+            --policy-document file://aws/lambda/bedrock-policy.json
+          # Freshly created roles aren't immediately assumable everywhere -
+          # give IAM a moment to propagate before Lambda tries to use it.
+          echo "Waiting for IAM role to propagate..."
+          sleep 10
+        fi
+
+  deploy:
+    desc: Build and deploy the Lambda function (creates it on first run, updates it after)
+    deps: [package]
+    cmds:
+      - task: ensure-role
+      - |
+        ROLE_ARN=$(aws iam get-role --role-name {{.ROLE_NAME}} --query 'Role.Arn' --output text)
+        ENV_VARS="Variables={GH_PAT=$GH_PAT,GH_TODO_REPO_OWNER=$GH_TODO_REPO_OWNER,GH_TODO_REPO_NAME=$GH_TODO_REPO_NAME}"
+        if aws lambda get-function --function-name {{.FUNCTION_NAME}} --region "$AWS_REGION" >/dev/null 2>&1; then
+          aws lambda update-function-code --function-name {{.FUNCTION_NAME}} --region "$AWS_REGION" \
+            --zip-file "fileb://{{.ZIP_FILE}}" >/dev/null
+          aws lambda wait function-updated --function-name {{.FUNCTION_NAME}} --region "$AWS_REGION"
+          aws lambda update-function-configuration --function-name {{.FUNCTION_NAME}} --region "$AWS_REGION" \
+            --environment "$ENV_VARS" >/dev/null
+        else
+          aws lambda create-function --function-name {{.FUNCTION_NAME}} --region "$AWS_REGION" \
+            --runtime python3.13 --handler function.handler --role "$ROLE_ARN" \
+            --zip-file "fileb://{{.ZIP_FILE}}" --timeout 10 --memory-size 256 \
+            --environment "$ENV_VARS" >/dev/null
+        fi
+
+  allow-alexa:
+    desc: 'One-time: grant an Alexa skill permission to invoke this function (usage: task allow-alexa SKILL_ID=amzn1.ask.skill.xxx)'
+    cmds:
+      - |
+        aws lambda add-permission --function-name {{.FUNCTION_NAME}} --region "$AWS_REGION" \
+          --statement-id alexa-skill-trigger --action lambda:InvokeFunction \
+          --principal alexa-appkit.amazon.com --event-source-token "{{.SKILL_ID}}"
