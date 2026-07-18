@@ -215,3 +215,6 @@ session.json
 
 # Any temporary directories
 tmp/
+
+# AWS SAM build artifacts
+.aws-sam/
