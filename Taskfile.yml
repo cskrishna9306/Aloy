@@ -1,0 +1,21 @@
+version: "3"
+
+tasks:
+  package:
+    desc: Assemble the Lambda deployment package
+    cmds:
+      # Install the dependencies first
+      - uv pip install -r aws/lambda/requirements.txt --target "{{.ARTIFACTS_DIR}}" --no-cache
+      # Copy the source code for the Lambda function handler
+      - cp aws/lambda/function.py "{{.ARTIFACTS_DIR}}/"
+      - cp -r src "{{.ARTIFACTS_DIR}}/"
+      - find "{{.ARTIFACTS_DIR}}/src" -name "__pycache__" -exec rm -rf {} +
+
+  deploy:
+    desc: Build and deploy the SAM stack
+    cmds:
+      - uv tool run --from aws-sam-cli sam build --template-file aws/sam/template.yaml
+      # Deploy from the *built* template, not the source one - the source
+      # template's raw CodeUri skips the Makefile build entirely and ships
+      # a broken package (function.py never gets copied into it)
+      - uv tool run --from aws-sam-cli sam deploy --template-file .aws-sam/build/template.yaml --config-file "{{.TASKFILE_DIR}}/aws/sam/samconfig.toml"
