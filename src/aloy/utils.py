@@ -26,6 +26,20 @@ def get_llm(temperature: float) -> BaseChatModel:
     )
 
 
+def gh_headers() -> dict[str, str]:
+    """
+    Build the shared auth headers used by every GitHub REST API call.
+
+    Returns:
+        dict[str, str]: The headers to pass along w/ every GitHub API request
+    """
+    return {
+        "Authorization": f"Bearer {config.GH_PAT}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+
+
 def load_system_prompt(prompt_file: str) -> str | None:
     """
     Load a system prompt markdown file from src/aloy/prompts/.
