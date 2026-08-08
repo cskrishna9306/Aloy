@@ -8,7 +8,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 # Import custom modules
 from src.aloy.config import config
-from src.aloy.models import AState, ALogger
+from src.aloy.models import AState, ALogger, ARoute, ASummary
 from src.aloy.tools import fetch_todos, update_todos
 from src.aloy.utils import get_llm, load_system_prompt
 
@@ -37,8 +37,8 @@ class Aloy:
         self.llm = get_llm(temperature=0.2)
 
         # Instantiate the router, summarizer, and logger w/ their respective output classes
-        self.router_llm = self.llm.with_structured_output(AState)
-        self.summarizer_llm = self.llm.with_structured_output(AState)
+        self.router_llm = self.llm.with_structured_output(ARoute)
+        self.summarizer_llm = self.llm.with_structured_output(ASummary)
         self.logger_llm = self.llm.with_structured_output(ALogger)
 
         # Create the state graph
@@ -57,7 +57,7 @@ class Aloy:
             dict[str, Any]: The dictionary to update in the graph's global state
         """
         # Call the router to classify the user's intent
-        result: AState = self.router_llm.invoke(
+        result: ARoute = self.router_llm.invoke(
             [
                 SystemMessage(content=self.system_prompt),
                 SystemMessage(content=self.router_instructions),
@@ -82,7 +82,7 @@ class Aloy:
         todos_blob = "\n\n".join(f"### {path}\n{content}" for path, content in todos.items())
 
         # Call the summarizer to draft the spoken briefing
-        result: AState = self.summarizer_llm.invoke(
+        result: ASummary = self.summarizer_llm.invoke(
             [
                 SystemMessage(content=self.system_prompt),
                 SystemMessage(content=self.summarizer_instructions),
