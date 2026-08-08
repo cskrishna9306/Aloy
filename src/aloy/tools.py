@@ -5,7 +5,7 @@ import requests
 
 # Import custom modules
 from src.aloy.config import config
-from src.aloy.utils import gh_headers
+from src.aloy.utils import gh_headers, trim_todos
 
 
 def fetch_todos(paths: list[str] | None = config.GH_TODO_REPO_PATHS) -> dict[str, str]:
@@ -38,6 +38,11 @@ def fetch_todos(paths: list[str] | None = config.GH_TODO_REPO_PATHS) -> dict[str
 
                 # Update our local TODOs dictionary with the new content
                 todos[path] = base64.b64decode(response.json()["content"]).decode("utf-8")
+
+                # TODO: Here we make sure to exclude any completed TODOs marked either by [x]
+                # or enclosed ~~
+                todos[path] = trim_todos(todos[path])
+
             except Exception as e:
                 raise Exception(f"Error: Ran into an error while fetching TODO at {path} - {e}")
 
