@@ -14,7 +14,10 @@ tasks:
     cmds:
       - rm -rf "{{.BUILD_DIR}}" "{{.ZIP_FILE}}"
       - mkdir -p "{{.BUILD_DIR}}"
-      - uv pip install -r aws/lambda/requirements.txt --target "{{.BUILD_DIR}}" --no-cache
+      - |
+        uv pip install -r aws/lambda/requirements.txt --target "{{.BUILD_DIR}}" \
+          --python-platform x86_64-manylinux2014 --python-version 3.13 \
+          --only-binary :all: --no-cache
       - cp aws/lambda/function.py "{{.BUILD_DIR}}/"
       - cp -r src "{{.BUILD_DIR}}/"
       - find "{{.BUILD_DIR}}/src" -name "__pycache__" -exec rm -rf {} +
