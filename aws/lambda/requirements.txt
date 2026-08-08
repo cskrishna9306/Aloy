@@ -6,6 +6,7 @@ boto3>=1.43.47,<2.0.0
 langchain-aws>=1.6.4
 langchain-core>=1.5.3
 langgraph>=1.2.10
+markdown-it-py>=4.2.0
 pydantic>=2.13.4
 python-dotenv>=1.2.2
 requests>=2.34.2
